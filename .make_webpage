@@ -17,28 +17,64 @@ echo "<!doctype HTML>
 	<head>
 		<meta charset=\"utf-8\">
 		<title>Poll on $topic</title>
+		<style type=\"text/css\">
+			body {
+				font-family: monospace;
+				background: black;
+				color: #080;
+			}
+
+			main {
+				width: 800px;
+				margin: 0 auto;
+			}
+
+			.how_to_vote {
+				padding: 1em;
+				background: #080;
+				color: black;
+			}
+
+			.option {
+				float: left;
+				margin: 1em;
+				padding: 1em;
+				border: 1px solid #080;
+			}
+
+			a {
+				text-decoration: underline;
+				color: #0a0;
+			}
+		</style>
 	</head>
 " > index.html
 
 echo "<body>
-		<h1>$topic</h1>
+	  <main>
 		<h1>$question</h1>
-		<h2>How to vote?</h2>
-		<p>Type <strong>cd \"`pwd`\"</strong> and then <strong>./vote</strong> </p>
+		
+		<div class=\"how_to_vote\">
+			<h2>How to vote?</h2>
+			<p>Type <strong>cd \"`pwd`\"</strong> and then <strong>./vote</strong> </p>
+		</div>
 " >> index.html
 
 if stat --printf='' .vote_* 2>/dev/null; then
 	for thing in .vote_*; do
 		what=`cat "$thing"`
 		title=`echo "$thing" | cut -f 2- -d "_"`
+		echo "<div class=\"option\">" >> index.html
 		echo "<h3>$title</h3>" >> index.html
 		echo "<ol>" >> index.html
 		echo "$what" >> index.html
 		echo "</ol>" >> index.html
+		echo "</div>" >> index.html
 	done
 	rm .vote_*
 fi
 		
-echo "</body>
+echo "</main>
+</body>
 </html>" >> index.html
 
