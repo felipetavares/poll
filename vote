@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo -e "\e[1mPoll on `cat .topic`\e[0m"
+
+cat .question
+
+IFS=$'\n' read -d '' -r -a options < .options
+select option in "${options[@]}"
+do
+	if [ "$option" == "Other" ]; then
+		echo -n "Describe it: "
+		read option
+	fi
+
+	if [ "$option" != "" ]; then
+		echo $option > .user_$USER
+		if [ "$option" == "Withdraw vote" ]; then
+			rm .user_$USER
+		fi
+
+		./.make_webpage
+
+		break
+	fi
+done

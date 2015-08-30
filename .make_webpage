@@ -1,0 +1,44 @@
+#!/bin/bash
+
+topic=`cat .topic`
+question=`cat .question`
+
+if stat --printf='' .user_* 2>/dev/null; then
+	for vote in .user_*; do
+		user=`stat -c '%U' $vote`
+		what=`cat "$vote"`
+		echo "<li><a href=\"http://ctrl-c.club/~$user\">~$user</a></li>" >> ".vote_$what"
+	done
+fi
+
+echo "<!doctype HTML>
+
+<html>
+	<head>
+		<meta charset=\"utf-8\">
+		<title>Poll on $topic</title>
+	</head>
+" > index.html
+
+echo "<body>
+		<h1>$topic</h1>
+		<h1>$question</h1>
+		<h2>How to vote?</h2>
+		<p>Type <strong>cd \"`pwd`\"</strong> and then <strong>./vote</strong> </p>
+" >> index.html
+
+if stat --printf='' .vote_* 2>/dev/null; then
+	for thing in .vote_*; do
+		what=`cat "$thing"`
+		title=`echo "$thing" | cut -f 2- -d "_"`
+		echo "<h3>$title</h3>" >> index.html
+		echo "<ol>" >> index.html
+		echo "$what" >> index.html
+		echo "</ol>" >> index.html
+	done
+	rm .vote_*
+fi
+		
+echo "</body>
+</html>" >> index.html
+

@@ -1,0 +1,216 @@
+#!/bin/bash
+
+# Makes sure a directory path always ends
+# with a /
+fix_path () {
+	if [ $# -eq 0 ]; then
+		echo ""
+	fi
+
+	if [ -d "$1" ]; then
+		name="$1"
+		len=${#name}-1
+
+		if [ "${name:len}" != "/" ]; then
+			name="$name/"
+		fi
+
+		echo "$name"
+	else
+		echo "$1"
+	fi
+}
+
+# Check if a directory is a pool
+# Called by check()
+do_check () {
+	path=`fix_path $1`
+	
+	# Verify if there is a .topic file
+	if [ ! -f "${path}.topic" ]; then
+		echo "fail"
+		return
+	fi
+
+	# .question
+	if [ ! -f "${path}.question" ]; then
+		echo "fail"
+		return
+	fi
+
+	# .options
+	if [ ! -f "${path}.options" ]; then
+		echo "fail"
+		return
+	fi
+
+	# .make_webpage
+	if [ ! -f "${path}.make_webpage" ]; then
+		echo "fail"
+		return
+	fi
+
+	# vote
+	if [ ! -f "${path}vote" ]; then
+		echo "fail"
+		return
+	fi
+
+	echo "ok"
+}
+
+# Check if a directory is a poll
+check () {
+	# Check the current directory
+	if [ $# -eq 0 ]; then
+		do_check "."
+	else
+		do_check $1
+	fi
+}
+
+do_result () {
+	declare -A count
+	total=0
+
+	# Count votes
+	for file in "$1".user_*; do
+		user="`stat -c '%U' \"$file\"`"
+		what="`cat \"$file\"`"
+
+		if [ ! `test "${count[\"$what\"]+isset}"` ]; then
+			let "count[\"$what\"]++"
+		else
+			count["$what"]=0
+		fi
+		
+		let "total++"
+	done
+
+	# Print votes, sorted by most voted
+	for option in "${!count[@]}"; do
+		echo "$option" - ${count["$option"]} votes - `echo "scale=2; ${count["$option"]}/($total)*100" | bc -l`%
+	done |
+	sort -rn -k3
+}
+
+result () {
+	dir=""
+	
+	if [ $# -lt 1 ]; then
+		dir="."
+	else
+		dir=$1
+	fi
+
+	if [ "`check \"$dir\"`" == "ok" ]; then
+		do_result "`fix_path \"$dir\"`"
+	else
+		echo "poll: \"$dir\" is not a poll directory!"
+	fi
+}
+
+update () {
+	dir=""
+	
+	if [ $# -lt 1 ]; then
+		dir="."
+	else
+		dir=$1
+	fi
+
+	if [ "`check $dir`" == "ok" ]; then
+		cd "$dir"
+		./.make_webpage
+	else
+		echo "poll: \"$dir\" is not a poll directory!"
+	fi
+}
+
+new () {
+	if [ $# -lt 1 ]; then
+		echo "use:"
+		echo -e "\tpoll new DIRECTORY"
+		return
+	fi
+
+	dir="`fix_path \"$1\"`"
+
+	# Check if the dir already exists
+	if [ -d "$dir" ]; then
+		echo "Directory \"$dir\" already exists!"
+		echo "OVERWRITE?"
+		opts="yes no"
+		select overwrite in $opts
+		do
+			if [ "$overwrite" == "yes" ]; then
+				break
+			else
+				return
+			fi
+		done
+		rm -rf "$dir"
+	fi
+
+	echo "Creating directory..."
+	mkdir "$dir"
+	echo "Setting permissions..."
+	chmod 1777 "$dir"
+
+	echo "Creating files..."
+	echo "Edit the .topic file to change this topic" > "$dir/.topic"
+	echo "Edit the .question file to change this question" > "$dir/.question"
+	echo "Other" > "$dir/.options"
+	touch "$dir/index.html"
+	chmod 666 "$dir/index.html"
+	cp /usr/local/share/poll/.make_webpage "$dir"
+	cp /usr/local/share/poll/vote "$dir"
+	cd "$dir"
+	./.make_webpage
+
+	echo "Now you can edit the dot-files (.question, .topic, .options) inside $dir"
+}
+
+help () {
+	echo "use:"
+	echo -e "\tpoll new DIRECTORY      - to create a new poll"
+	echo -e "\tpoll result [DIRECTORY] - to check for poll results"
+	echo -e "\tpoll update [DIRECTORY] - update the webpage"
+}
+
+if [ $# -eq 0 ]; then
+	help
+	exit
+fi
+
+if [ $1 == "help" ]; then
+	help
+	exit
+fi
+
+if [ $1 == "new" ]; then
+	if [ "$2" == "" ]; then
+		new
+	else
+		new "$2"
+	fi
+	exit
+fi
+
+if [ $1 == "result" ]; then
+	if [ "$2" == "" ]; then
+		result
+	else
+		result "$2"
+	fi
+	exit
+fi
+
+if [ $1 == "update" ]; then
+	if [ "$2" == "" ]; then
+		update
+	else
+		update "$2"
+	fi
+	exit
+fi
