@@ -84,6 +84,10 @@ where `DIRECTORY` is the path to the poll.
 
 The results are automatically ordered from more votes to less votes.
 
+# Voting
+
+Instructions on how to vote are provided by the created poll itself.
+
 # Bugs
 
 Report bugs as issues here on github.
